@@ -19,7 +19,7 @@ Interface created with PyQt5.
 * The number of notes in the input must match the number of +/- Note Min and Max inputs
 
 
-##To-Do
+## To Do
 * Handle midi files with various tracks.
 
 
