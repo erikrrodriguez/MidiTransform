@@ -117,7 +117,7 @@ class AppWindow(QDialog):
 
 	def set_note_pitch(self):
 		notes = self.ui.notePitchBox.text()
-		notes = ''.join([c for c in notes if c in '0123456789,-'])
+		notes = ''.join([c for c in notes if c in '0123456789,'])
 		self.ui.notePitchBox.setText(notes)
 		notes = notes.split(',')
 		notes = [int(x) for x in notes]
