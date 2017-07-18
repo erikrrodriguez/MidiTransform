@@ -70,10 +70,10 @@ class AppWindow(QDialog):
 			self.ui.fileName.setText(self.shortName)
 
 	def run(self):
-		if not self.mid is None and len(self.noteTargets) == len(self.noteMin) and len(self.noteMin) == len(self.noteMax):
-			#make dict of note pitch, min, max
-			noteRange = list(zip(self.noteMin, self.noteMax)) #[(a,b), (c,d)]
-			noteMinMax = dict(zip(self.noteTargets, noteRange)) #{note : (min, max), note : (min, max)}
+		if not self.mid is None:
+			#make dict of note_targets, min_vals, max_vals
+			# notes_mins_maxs = list(zip(self.note_targets.values(), self.min_vals.values(), self.max_vals.values()))
+			# prop_nmm = dict(zip(self.midi_props, notes_mins_maxs)) #{'Note' : [([notes], [mins], [maxs])]}
 
 			track = MidiTrack()
 			for i, msg in enumerate(self.mid.tracks[1]):
@@ -81,44 +81,77 @@ class AppWindow(QDialog):
 				if msg.is_meta:
 					track.append(msg)
 				if msg.type == 'note_on':
-					if msg.note in noteMinMax:
-						new_note = self.clamp(0, msg.note + randint(noteMinMax[msg.note][0], noteMinMax[msg.note][1]), 127)
-					else:
-						new_note = msg.note
-					new_vel = self.clamp(0, msg.velocity + randint(self.velMin,self.velMax), 127)
-					new_start_time = self.clamp(0, msg.time + randint(self.startTimeMin,self.startTimeMax), 127)
-					new_end_time = new_start_time + 50
-					track.append(Message('note_on', note=new_note, velocity=new_vel, time=new_start_time))
-					#Search for old note off time
+					new_note = msg.note
+					new_vel = msg.velocity
+					new_start = msg.time
+					new_end = msg.time + 1
+					#Search for msg note off time
 					for j in range(i, len(self.mid.tracks[1])):
 						test_msg = self.mid.tracks[1][j]
 						if test_msg.type == 'note_off' and test_msg.note == msg.note:
-							new_end_time = self.clamp(msg.time, test_msg.time + randint(self.endTimeMin,self.endTimeMax), 127)
+							new_end = test_msg.time
 							break
-					track.append(Message('note_off', note=new_note, velocity=new_vel, time=new_end_time))
 
+					if self.enable_flags['Note']:
+						if self.except_flags['Note']:
+							if msg.note not in note_targets['Note']:
+								new_note = self.clamp(0, msg.note + randint(min_vals['Note'][0], max_vals['Note'][:-1]), 127)
+						else:
+							if msg.note in note_targets['Note']:
+								nindex = note_targets['Note'].index(msg.note)
+								new_note = self.clamp(0, msg.note + randint(min_vals['Note'][nindex], max_vals['Note'][nindex]), 127)
+					if self.enable_flags['Velocity']:
+						if self.except_flags['Velocity']:
+							if msg.note not in note_targets['Velocity']:
+								new_vel = self.clamp(0, msg.vel + randint(min_vals['Velocity'][0], max_vals['Velocity'][:-1]), 127)
+						else:
+							if msg.note in note_targets['Velocity']:
+								nindex = note_targets['Velocity'].index(msg.note)
+								new_vel = self.clamp(0, msg.vel + randint(min_vals['Velocity'][nindex], max_vals['Velocity'][nindex]), 127)
+					if self.enable_flags['Start Time']:
+						if self.except_flags['Start Time']:
+							if msg.note not in note_targets['Start Time']:
+								new_start = self.clamp(0, msg.note + randint(min_vals['Start Time'][0], max_vals['Start Time'][:-1]), 127)
+						else:
+							if msg.note in note_targets['Start Time']:
+								nindex = note_targets['Start Time'].index(msg.note)
+								new_start = self.clamp(0, msg.time + randint(min_vals['Start Time'][nindex], max_vals['Start Time'][nindex]), 127)
+					if self.enable_flags['End Time']:
+						if self.except_flags['End Time']:
+							if msg.note not in note_targets['End Time']:
+								new_end = self.clamp(msg.time, new_end + randint(min_vals['End Time'][0], max_vals['End Time'][:-1]), 127)
+						else:
+							if msg.note in note_targets['End Time']:
+								nindex = note_targets['End Time'].index(msg.note)
+								new_end = self.clamp(msg.time, new_end + randint(min_vals['End Time'][nindex], max_vals['End Time'][nindex]), 127)
+
+					track.append(Message('note_on', note=new_note, velocity=new_vel, time=new_start))
+					track.append(Message('note_off', note=new_note, velocity=new_vel, time=new_end))
 			# track.sort(key=lambda message: message.time)
-			new_mid = MidiFile()
-			new_mid.tracks.append(self.mid.tracks[0])
-			new_mid.tracks.append(track)
-			if self.ui.newFileName.text():
-				new_file_name = self.ui.newFileName.text()
-				if new_file_name[-4:] is '.mid':
-					new_file_name = new_file_name[:-4]
-			else:
-				new_file_name = self.shortName
-			new_mid.save(new_file_name)
-			if keep_file:
-				#keep new midi file in memory
-				self.mid = new_mid
-				self.ui.fileName.setText(newFileName)
-				self.shortName = newFileName
-				self.length = len(self.mid.tracks[1])
-			else:
-				#Clear midi file from memory
-				self.mid = None
-				self.ui.fileName.setText('Select File')
-				self.ui.newFileName.setText('')		
+			self.create_new_mid(track)	
+
+	def create_new_mid(self, track):
+		new_mid = MidiFile()
+		new_mid.tracks.append(self.mid.tracks[0])
+		new_mid.tracks.append(track)
+		if self.ui.newFileName.text():
+			new_file_name = self.ui.newFileName.text()
+			if new_file_name[-4:] is '.mid':
+				new_file_name = new_file_name[:-4]
+		else:
+			new_file_name = self.shortName
+		new_mid.save(new_file_name)
+		if self.keep_file:
+			#keep new midi file in memory
+			self.mid = new_mid
+			self.ui.fileName.setText(newFileName)
+			self.shortName = newFileName
+			self.length = len(self.mid.tracks[1])
+		else:
+			#Clear midi file from memory
+			self.mid = None
+			self.ui.fileName.setText('Select File')
+			self.ui.newFileName.setText('')
 
 	def set_enable_flag(self, midiprop, state):
 		if state == Qt.Checked:
@@ -147,13 +180,11 @@ class AppWindow(QDialog):
 		notes = ''.join([c for c in notes if c in '0123456789,'])
 		if notes is '':
 			notes = '0'
-		set_text_funcs = [self.ui.notePitchBox.setText(notes), self.ui.velNotes.setText(notes), self.ui.startTimeNotes.setText(notes), self.ui.endTimeNotes.setText(notes)]
-		prop_funcs = dict(zip(self.midi_props, set_text_funcs))
-		self.ui.notePitchBox.setText(prop_funcs[midiprop])
+		# self.ui.notePitchBox.setText(notes)
 		notes = notes.split(',')
 		notes = [int(x) for x in notes]
 		self.note_targets[midiprop] = notes
-		print(self.note_targets)
+		# print(self.note_targets)
 
 	def set_min(self, midiprop):
 		get_text_funcs = [self.ui.noteMin.text(), self.ui.velMin.text(), self.ui.startTimeMin.text(), self.ui.endTimeMin.text()]
@@ -166,7 +197,7 @@ class AppWindow(QDialog):
 		mins = mins.split(',')
 		mins = [int(x) for x in mins]
 		self.min_vals[midiprop] = mins
-		print(self.min_vals)
+		# print(self.min_vals)
 
 	def set_max(self, midiprop):
 		get_text_funcs = [self.ui.noteMax.text(), self.ui.velMax.text(), self.ui.startTimeMax.text(), self.ui.endTimeMax.text()]
@@ -179,11 +210,10 @@ class AppWindow(QDialog):
 		maxs = maxs.split(',')
 		maxs = [int(x) for x in maxs]
 		self.max_vals[midiprop] = maxs
-		print(self.max_vals)
+		# print(self.max_vals)
 
 	def clamp(self, minimum, x, maximum):
 		return max(minimum, min(x, maximum))
-
 
 app = QApplication(sys.argv)
 ui = AppWindow()
