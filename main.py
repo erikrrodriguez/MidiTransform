@@ -19,30 +19,6 @@ class AppWindow(QDialog):
 		self.length = 0
 		self.keep_file = False
 
-		# self.noteFlag = False
-		# self.noteExceptFlag = False
-		# self.noteTargets = [0]
-		# self.noteMin = [0]
-		# self.noteMax = [0]
-
-		# self.velFlag = False
-		# self.velExceptFlag = False
-		# self.velTargets = [0]
-		# self.velMin = [0]
-		# self.velMax = [0]
-
-		# self.startTimeFlag = False
-		# self.startExceptFlag = False
-		# self.startTimeTargets = [0]
-		# self.startTimeMin = [0]
-		# self.startTimeMax = [0]
-
-		# self.endTimeFlag = False
-		# self.endExceptFlag = False
-		# self.endTimeTargets = [0]
-		# self.endTimeMin = [0]
-		# self.endTimeMax = [0]
-
 		self.midi_props = ['Note', 'Velocity', 'Start Time', 'End Time']
 		self.enable_flags = dict(zip(self.midi_props, [False, False, False, False]))
 		self.except_flags = dict(zip(self.midi_props, [False, False, False, False]))
@@ -171,7 +147,9 @@ class AppWindow(QDialog):
 		notes = ''.join([c for c in notes if c in '0123456789,'])
 		if notes is '':
 			notes = '0'
-		# self.ui.notePitchBox.setText(notes)
+		set_text_funcs = [self.ui.notePitchBox.setText(notes), self.ui.velNotes.setText(notes), self.ui.startTimeNotes.setText(notes), self.ui.endTimeNotes.setText(notes)]
+		prop_funcs = dict(zip(self.midi_props, set_text_funcs))
+		self.ui.notePitchBox.setText(prop_funcs[midiprop])
 		notes = notes.split(',')
 		notes = [int(x) for x in notes]
 		self.note_targets[midiprop] = notes
@@ -182,6 +160,8 @@ class AppWindow(QDialog):
 		prop_funcs = dict(zip(self.midi_props, get_text_funcs))
 		mins = prop_funcs[midiprop] #return get text function for property
 		mins = ''.join([c for c in mins if c in '0123456789,-'])
+		if mins is '':
+			mins = '0'
 		# self.ui.notePitchBox.setText(notes)
 		mins = mins.split(',')
 		mins = [int(x) for x in mins]
@@ -193,69 +173,13 @@ class AppWindow(QDialog):
 		prop_funcs = dict(zip(self.midi_props, get_text_funcs))
 		maxs = prop_funcs[midiprop] #return get text function for property
 		maxs = ''.join([c for c in maxs if c in '0123456789,-'])
+		if maxs is '':
+			maxs = '0'
 		# self.ui.notePitchBox.setText(notes)
 		maxs = maxs.split(',')
 		maxs = [int(x) for x in maxs]
 		self.max_vals[midiprop] = maxs
 		print(self.max_vals)
-
-	# def set_note_min(self):
-	# 	vals = self.ui.noteMin.text()
-	# 	vals = ''.join([c for c in vals if c in '0123456789,-'])
-	# 	self.ui.noteMin.setText(vals)
-	# 	vals = vals.split(',')
-	# 	vals = [int(x) for x in vals]
-	# 	self.noteMin = vals
-
-	# def set_note_max(self):
-	# 	vals = self.ui.noteMax.text()
-	# 	vals = ''.join([c for c in vals if c in '0123456789,-'])
-	# 	self.ui.noteMax.setText(vals)
-	# 	vals = vals.split(',')
-	# 	vals = [int(x) for x in vals]
-	# 	self.noteMax = vals
-
-	# def set_vel_min(self):
-	# 	self.velMin = self.ui.velMin.value()
-
-	# def set_vel_max(self):
-	# 	self.velMax = self.ui.velMax.value()
-
-	# def set_start_time_min(self):
-	# 	self.startTimeMin = self.ui.startTimeMin.value()
-
-	# def set_start_time_max(self):
-	# 	self.startTimeMax = self.ui.startTimeMax.value()
-
-	# def set_end_time_min(self):
-	# 	self.endTimeMin = self.ui.endTimeMin.value()
-
-	# def set_end_time_max(self):
-	# 	self.endTimeMax = self.ui.endTimeMax.value()
-
-	# def note_flag(self, state):
-	# 	if state == Qt.Checked:
-	# 		self.noteFlag = True
-	# 	else:
-	# 		self.noteFlag = False
-
-	# def vel_flag(self, state):
-	# 	if state == Qt.Checked:
-	# 		self.velFlag = True
-	# 	else:
-	# 		self.velFlag = False
-
-	# def start_time_flag(self, state):
-	# 	if state == Qt.Checked:
-	# 		self.startTimeFlag = True
-	# 	else:
-	# 		self.startTimeFlag = False
-
-	# def end_time_flag(self, state):
-	# 	if state == Qt.Checked:
-	# 		self.endTimeFlag = True
-	# 	else:
-	# 		self.endTimeFlag = False
 
 	def clamp(self, minimum, x, maximum):
 		return max(minimum, min(x, maximum))
