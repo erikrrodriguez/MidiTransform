@@ -21,6 +21,8 @@ Interface created with PyQt5.
 
 ## To Do
 * Handle midi files with various tracks.
+* Allow note specifications for velocity, start time, and end time
+* Implement "Affect all notes except..." check boxes
 
 
 
