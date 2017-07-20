@@ -4,7 +4,7 @@ from functools import partial
 
 import sys
 from gui import Ui_Window
-from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog
+from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog, QMessageBox
 from PyQt5.QtCore import Qt
 
 class AppWindow(QDialog):
@@ -18,6 +18,7 @@ class AppWindow(QDialog):
 		self.shortName = ''
 		self.length = 0
 		self.keep_file = False
+		self.orig_style = self.ui.velNotes.styleSheet()
 
 		self.midi_props = ['Note', 'Velocity', 'Start Time', 'End Time']
 		self.enable_flags = dict(zip(self.midi_props, [False, False, False, False]))
@@ -25,6 +26,12 @@ class AppWindow(QDialog):
 		self.note_targets = dict(zip(self.midi_props, [[0], [0], [0], [0]]))
 		self.min_vals = dict(zip(self.midi_props, [[0], [0], [0], [0]]))
 		self.max_vals = dict(zip(self.midi_props, [[0], [0], [0], [0]]))
+		self.set_note_text_funcs = dict(zip(self.midi_props,[self.ui.noteNotes.setText, self.ui.velNotes.setText, 
+															self.ui.startTimeNotes.setText, self.ui.endTimeNotes.setText]))
+		self.set_min_text_funcs = dict(zip(self.midi_props,[self.ui.noteMin.setText, self.ui.velMin.setText, 
+															self.ui.startTimeMin.setText, self.ui.endTimeMin.setText]))
+		self.set_max_text_funcs = dict(zip(self.midi_props,[self.ui.noteMax.setText, self.ui.velMax.setText, 
+															self.ui.startTimeMax.setText, self.ui.endTimeMax.setText]))
 
 		#connect buttons
 		self.ui.openFile.clicked.connect(self.open_file)
@@ -44,7 +51,7 @@ class AppWindow(QDialog):
 		self.ui.keepFileCheckBox.stateChanged.connect(self.keep_file_mem)
 		
 		#Text boxes
-		self.ui.notePitchBox.editingFinished.connect(partial(self.set_notes, 'Note'))
+		self.ui.noteNotes.editingFinished.connect(partial(self.set_notes, 'Note'))
 		self.ui.velNotes.editingFinished.connect(partial(self.set_notes, 'Velocity'))
 		self.ui.startTimeNotes.editingFinished.connect(partial(self.set_notes, 'Start Time'))
 		self.ui.endTimeNotes.editingFinished.connect(partial(self.set_notes, 'End Time'))
@@ -70,11 +77,7 @@ class AppWindow(QDialog):
 			self.ui.fileName.setText(self.shortName)
 
 	def run(self):
-		if not self.mid is None:
-			#make dict of note_targets, min_vals, max_vals
-			# notes_mins_maxs = list(zip(self.note_targets.values(), self.min_vals.values(), self.max_vals.values()))
-			# prop_nmm = dict(zip(self.midi_props, notes_mins_maxs)) #{'Note' : [([notes], [mins], [maxs])]}
-
+		if self.check_no_errors():
 			track = MidiTrack()
 			for i, msg in enumerate(self.mid.tracks[1]):
 				self.ui.progressBar.setValue(int(100*(i+1)/self.length))
@@ -94,35 +97,35 @@ class AppWindow(QDialog):
 
 					if self.enable_flags['Note']:
 						if self.except_flags['Note']:
-							if msg.note not in note_targets['Note']:
-								new_note = self.clamp(0, msg.note + randint(min_vals['Note'][0], max_vals['Note'][:-1]), 127)
+							if msg.note not in self.note_targets['Note']:
+								new_note = self.clamp(0, msg.note + randint(min_vals['Note'][0], max_vals['Note'][0]), 127)
 						else:
-							if msg.note in note_targets['Note']:
-								nindex = note_targets['Note'].index(msg.note)
+							if msg.note in self.note_targets['Note']:
+								nindex = self.note_targets['Note'].index(msg.note)
 								new_note = self.clamp(0, msg.note + randint(min_vals['Note'][nindex], max_vals['Note'][nindex]), 127)
 					if self.enable_flags['Velocity']:
 						if self.except_flags['Velocity']:
-							if msg.note not in note_targets['Velocity']:
-								new_vel = self.clamp(0, msg.vel + randint(min_vals['Velocity'][0], max_vals['Velocity'][:-1]), 127)
+							if msg.note not in self.note_targets['Velocity']:
+								new_vel = self.clamp(0, msg.vel + randint(min_vals['Velocity'][0], max_vals['Velocity'][0]), 127)
 						else:
-							if msg.note in note_targets['Velocity']:
-								nindex = note_targets['Velocity'].index(msg.note)
+							if msg.note in self.note_targets['Velocity']:
+								nindex = self.note_targets['Velocity'].index(msg.note)
 								new_vel = self.clamp(0, msg.vel + randint(min_vals['Velocity'][nindex], max_vals['Velocity'][nindex]), 127)
 					if self.enable_flags['Start Time']:
 						if self.except_flags['Start Time']:
-							if msg.note not in note_targets['Start Time']:
-								new_start = self.clamp(0, msg.note + randint(min_vals['Start Time'][0], max_vals['Start Time'][:-1]), 127)
+							if msg.note not in self.note_targets['Start Time']:
+								new_start = self.clamp(0, msg.note + randint(min_vals['Start Time'][0], max_vals['Start Time'][0]), 127)
 						else:
-							if msg.note in note_targets['Start Time']:
-								nindex = note_targets['Start Time'].index(msg.note)
+							if msg.note in self.note_targets['Start Time']:
+								nindex = self.note_targets['Start Time'].index(msg.note)
 								new_start = self.clamp(0, msg.time + randint(min_vals['Start Time'][nindex], max_vals['Start Time'][nindex]), 127)
 					if self.enable_flags['End Time']:
 						if self.except_flags['End Time']:
-							if msg.note not in note_targets['End Time']:
-								new_end = self.clamp(msg.time, new_end + randint(min_vals['End Time'][0], max_vals['End Time'][:-1]), 127)
+							if msg.note not in self.note_targets['End Time']:
+								new_end = self.clamp(msg.time, new_end + randint(min_vals['End Time'][0], max_vals['End Time'][0]), 127)
 						else:
-							if msg.note in note_targets['End Time']:
-								nindex = note_targets['End Time'].index(msg.note)
+							if msg.note in self.note_targets['End Time']:
+								nindex = self.note_targets['End Time'].index(msg.note)
 								new_end = self.clamp(msg.time, new_end + randint(min_vals['End Time'][nindex], max_vals['End Time'][nindex]), 127)
 
 					track.append(Message('note_on', note=new_note, velocity=new_vel, time=new_start))
@@ -153,6 +156,53 @@ class AppWindow(QDialog):
 			self.ui.fileName.setText('Select File')
 			self.ui.newFileName.setText('')
 
+	def check_no_errors(self):
+		bool = True
+		errors = ''
+		if self.mid is None:
+			errors = errors + 'No File Open\n'
+			bool = False
+		if not any(self.enable_flags.values()):
+			errors = errors + 'No Transforms Enabled\n'
+			bool = False
+		for prop in self.midi_props:
+			if self.enable_flags[prop]:
+				if not self.except_flags[prop]:
+					if len(self.note_targets[prop]) != len(self.min_vals[prop]) or len(self.note_targets[prop]) != len(self.max_vals[prop]):
+						bool = False
+						color_clear_error(prop, 'error')
+						errors = errors + prop + ": # Of Notes, Mins, and Maxs Must Match\n"
+					else:
+						if len(self.min_vals[prop]) != 1 or len(self.max_vals[prop]) != 1:
+							bool = False
+							color_clear_error(prop, 'error')
+							errors = errors + prop + ": Only 1 Min and 1 Max is allowed when Except Enabled\n"
+		if errors:
+			msg_box = QMessageBox.about(self, "Error!", errors)
+		return bool
+
+	def color_clear_error(self, prop, error):
+		if error is 'error':
+			box_style = "border: 1px solid red;"
+		else:
+			box_style = ""
+		if prop == 'Note':
+			self.ui.noteNotes.setStyleSheet(box_style)
+			self.ui.noteMin.setStyleSheet(box_style)
+			self.ui.noteMax.setStyleSheet(box_style)
+		if prop == 'Velocity':
+			self.ui.velNotes.setStyleSheet(box_style)
+			self.ui.velMin.setStyleSheet(box_style)
+			self.ui.velMax.setStyleSheet(box_style)
+		if prop == 'Start Time':
+			self.ui.startTimeNotes.setStyleSheet(box_style)
+			self.ui.startTimeMin.setStyleSheet(box_style)
+			self.ui.startTimeMax.setStyleSheet(box_style)
+		if prop == 'End Time':
+			self.ui.endTimeNotes.setStyleSheet(box_style)
+			self.ui.endTimeMin.setStyleSheet(box_style)
+			self.ui.endTimeMax.setStyleSheet(box_style)
+
 	def set_enable_flag(self, midiprop, state):
 		if state == Qt.Checked:
 			self.enable_flags[midiprop] = True
@@ -174,16 +224,17 @@ class AppWindow(QDialog):
 			self.keep_file = False
 
 	def set_notes(self, midiprop):
-		get_text_funcs = [self.ui.notePitchBox.text(), self.ui.velNotes.text(), self.ui.startTimeNotes.text(), self.ui.endTimeNotes.text()]
+		get_text_funcs = [self.ui.noteNotes.text(), self.ui.velNotes.text(), self.ui.startTimeNotes.text(), self.ui.endTimeNotes.text()]
 		prop_funcs = dict(zip(self.midi_props, get_text_funcs))
 		notes = prop_funcs[midiprop] #return get text function for property
 		notes = ''.join([c for c in notes if c in '0123456789,'])
 		if notes is '':
 			notes = '0'
-		# self.ui.notePitchBox.setText(notes)
+		self.set_note_text_funcs[midiprop](notes)
 		notes = notes.split(',')
 		notes = [int(x) for x in notes]
 		self.note_targets[midiprop] = notes
+		self.color_clear_error(midiprop, 'clear')
 		# print(self.note_targets)
 
 	def set_min(self, midiprop):
@@ -193,10 +244,11 @@ class AppWindow(QDialog):
 		mins = ''.join([c for c in mins if c in '0123456789,-'])
 		if mins is '':
 			mins = '0'
-		# self.ui.notePitchBox.setText(notes)
+		self.set_min_text_funcs[midiprop](mins)
 		mins = mins.split(',')
 		mins = [int(x) for x in mins]
 		self.min_vals[midiprop] = mins
+		self.color_clear_error(midiprop, 'clear')
 		# print(self.min_vals)
 
 	def set_max(self, midiprop):
@@ -206,10 +258,11 @@ class AppWindow(QDialog):
 		maxs = ''.join([c for c in maxs if c in '0123456789,-'])
 		if maxs is '':
 			maxs = '0'
-		# self.ui.notePitchBox.setText(notes)
+		self.set_max_text_funcs[midiprop](maxs)
 		maxs = maxs.split(',')
 		maxs = [int(x) for x in maxs]
 		self.max_vals[midiprop] = maxs
+		self.color_clear_error(midiprop, 'clear')
 		# print(self.max_vals)
 
 	def clamp(self, minimum, x, maximum):
