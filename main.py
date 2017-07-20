@@ -170,13 +170,13 @@ class AppWindow(QDialog):
 				if not self.except_flags[prop]:
 					if len(self.note_targets[prop]) != len(self.min_vals[prop]) or len(self.note_targets[prop]) != len(self.max_vals[prop]):
 						bool = False
-						color_clear_error(prop, 'error')
+						self.color_clear_error(prop, 'error')
 						errors = errors + prop + ": # Of Notes, Mins, and Maxs Must Match\n"
-					else:
-						if len(self.min_vals[prop]) != 1 or len(self.max_vals[prop]) != 1:
-							bool = False
-							color_clear_error(prop, 'error')
-							errors = errors + prop + ": Only 1 Min and 1 Max is allowed when Except Enabled\n"
+				else:
+					if len(self.min_vals[prop]) != 1 or len(self.max_vals[prop]) != 1:
+						bool = False
+						self.color_clear_error(prop, 'error')
+						errors = errors + prop + ": Only 1 Min and 1 Max is allowed when Except Enabled\n"
 		if errors:
 			msg_box = QMessageBox.about(self, "Error!", errors)
 		return bool
