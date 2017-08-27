@@ -147,8 +147,8 @@ class AppWindow(QDialog):
 		if self.keep_file:
 			#keep new midi file in memory
 			self.mid = new_mid
-			self.ui.fileName.setText(newFileName)
-			self.shortName = newFileName
+			self.ui.fileName.setText(new_file_name)
+			self.shortName = new_file_name
 			self.length = len(self.mid.tracks[1])
 		else:
 			#Clear midi file from memory
